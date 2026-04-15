@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #0d1117;
+  --color-surface: #161b22;
+  --color-surface-2: #1c2128;
+  --color-border: #30363d;
+  --color-text: #c9d1d9;
+  --color-muted: #8b949e;
+  --color-head: #f0f6fc;
+  --color-accent: #58a6ff;
+  --color-accent-hover: #79b8ff;
+  --color-green: #3fb950;
+  --color-red: #f85149;
+
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
+}
+
+html, body, #root {
+  min-height: 100vh;
+}
+
+/* @layer base {
+
+} */
