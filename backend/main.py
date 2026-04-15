@@ -50,26 +50,37 @@ async def get_repos(username: str):
 
     async with httpx.AsyncClient() as client:
         try:
-            # First: resolve who owns the token
+            # Step 1: resolve who owns the token
             me_res = await client.get(f"{GITHUB_API_URL}/user", headers=headers)
             token_owner = me_res.json().get("login", "") if me_res.status_code == 200 else ""
 
-            # If searching for the token owner themselves, use /user/repos to get
-            # all repos (including private). Otherwise use /users/{username}/repos.
+            # Step 2: look up the target account to determine its type
+            profile_res = await client.get(f"{GITHUB_API_URL}/users/{username}", headers=headers)
+            if profile_res.status_code == 404:
+                raise HTTPException(status_code=404, detail=f"GitHub user or org '{username}' not found.")
+
+            account_type = profile_res.json().get("type", "User")  # "User" or "Organization"
+
+            # Step 3: choose the right endpoint
             if username.lower() == token_owner.lower():
-                url = f"{GITHUB_API_URL}/user/repos?sort=updated&per_page=100&type=all"
+                # Authenticated user's own account — full access (public + private)
+                url = f"{GITHUB_API_URL}/user/repos?sort=updated&per_page=100&type=owner"
+            elif account_type == "Organization":
+                # Org the token may have access to — returns all repos the token can see
+                url = f"{GITHUB_API_URL}/orgs/{username}/repos?sort=updated&per_page=100&type=all"
             else:
+                # Another individual — GitHub only exposes their public repos
                 url = f"{GITHUB_API_URL}/users/{username}/repos?sort=updated&per_page=100"
 
             response = await client.get(url, headers=headers)
 
             if response.status_code == 404:
-                raise HTTPException(status_code=404, detail=f"GitHub user '{username}' not found.")
+                raise HTTPException(status_code=404, detail=f"'{username}' not found.")
             if response.status_code == 200:
                 repos = response.json()
-                # Only include repos the user personally owns (created or forked),
-                # filtering out orgs, contributions, and membership repos.
-                owned = [r for r in repos if r["owner"]["login"].lower() == username.lower()]
+                # For orgs, keep all accessible repos; for users, keep only repos they own
+                if account_type != "Organization":
+                    repos = [r for r in repos if r["owner"]["login"].lower() == username.lower()]
                 return [
                     {
                         "id": r["id"],
@@ -78,8 +89,9 @@ async def get_repos(username: str):
                         "description": r.get("description") or "",
                         "stars": r["stargazers_count"],
                         "language": r.get("language") or "",
-                        "fork": r["fork"]
-                    } for r in owned
+                        "fork": r.get("fork", False),
+                        "private": r.get("private", False)
+                    } for r in repos
                 ]
             else:
                 error_data = response.json()

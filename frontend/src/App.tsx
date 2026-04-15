@@ -249,10 +249,6 @@ function App() {
             </div>
           </form>
         </div>
-
-        <p className="mt-4 text-[11px] text-muted">
-          ⚖️ Tokens are managed by the backend server for security.
-        </p>
       </main>
 
       <style>{`
