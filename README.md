@@ -28,16 +28,20 @@ Before running the servers, set up your GitHub Personal Access Token (PAT).
    ```bash
    cd backend
    ```
-2. Activate the virtual environment:
+2. Create a virtual environment:
+   ```bash
+   python -m venv venv
+   ```
+3. Activate the virtual environment:
    ```bash
    # Windows
    .\venv\Scripts\activate
    ```
-3. Install dependencies (if not already done):
+4. Install dependencies (if not already done):
    ```bash
    pip install fastapi uvicorn httpx python-dotenv
    ```
-4. Run the server:
+5. Run the server:
    ```bash
    python main.py
    ```
