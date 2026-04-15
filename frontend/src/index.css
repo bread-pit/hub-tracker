@@ -21,6 +21,58 @@ html, body, #root {
   min-height: 100vh;
 }
 
-/* @layer base {
+/* Markdown preview — GitHub dark prose */
+.prose-md { color: #c9d1d9; font-size: 0.8125rem; line-height: 1.7; }
 
-} */
+.prose-md h1, .prose-md h2, .prose-md h3,
+.prose-md h4, .prose-md h5, .prose-md h6 {
+  color: #f0f6fc; font-weight: 600; margin: 1em 0 0.4em;
+  border-bottom: 1px solid #30363d; padding-bottom: 0.2em;
+}
+.prose-md h1 { font-size: 1.4em; }
+.prose-md h2 { font-size: 1.2em; }
+.prose-md h3 { font-size: 1.05em; border-bottom: none; }
+
+.prose-md p  { margin: 0.6em 0; }
+.prose-md a  { color: #58a6ff; text-decoration: underline; }
+.prose-md a:hover { color: #79b8ff; }
+
+.prose-md ul, .prose-md ol { padding-left: 1.5em; margin: 0.5em 0; }
+.prose-md ul { list-style: disc; }
+.prose-md ol { list-style: decimal; }
+.prose-md li { margin: 0.2em 0; }
+
+/* GFM task lists */
+.prose-md input[type="checkbox"] { margin-right: 0.4em; accent-color: #58a6ff; }
+
+.prose-md blockquote {
+  border-left: 3px solid #30363d; color: #8b949e;
+  margin: 0.8em 0; padding: 0.2em 0.8em;
+}
+
+.prose-md code {
+  background: #161b22; border: 1px solid #30363d;
+  border-radius: 4px; padding: 0.1em 0.4em;
+  font-family: 'Fira Code', ui-monospace, monospace;
+  font-size: 0.9em; color: #f85149;
+}
+
+.prose-md pre {
+  background: #161b22; border: 1px solid #30363d;
+  border-radius: 6px; padding: 1em; overflow-x: auto;
+  margin: 0.8em 0;
+}
+.prose-md pre code {
+  background: none; border: none; padding: 0;
+  color: #c9d1d9; font-size: 0.85em;
+}
+
+/* GFM tables */
+.prose-md table { border-collapse: collapse; width: 100%; margin: 0.8em 0; font-size: 0.85em; }
+.prose-md th, .prose-md td { border: 1px solid #30363d; padding: 0.45em 0.75em; text-align: left; }
+.prose-md th { background: #1c2128; color: #f0f6fc; font-weight: 600; }
+.prose-md tr:nth-child(even) { background: #161b22; }
+
+.prose-md hr { border: none; border-top: 1px solid #30363d; margin: 1em 0; }
+
+.prose-md img { max-width: 100%; border-radius: 6px; }

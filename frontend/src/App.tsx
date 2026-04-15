@@ -6,6 +6,9 @@ import { Button } from './components/ui/Button'
 import { Banner } from './components/ui/Banner'
 import { LabelSelector } from './components/github/LabelSelector'
 import type { LabelType } from './components/github/LabelSelector'
+import { MarkdownToolbar } from './components/ui/MarkdownToolbar'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 
@@ -167,19 +170,28 @@ function App() {
               </div>
 
               {activeTab === 'write' ? (
-                <textarea 
-                  id="body" 
-                  rows={10} 
-                  placeholder="Describe the issue in detail. Markdown is supported."
-                  value={body} 
-                  onChange={(e) => setBody(e.target.value)}
-                  className="w-full bg-surface-2 border border-border rounded-md text-text text-xs leading-relaxed font-mono px-3 py-2 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20 focus:bg-[#1c2433] resize-y min-h-[300px]" 
-                />
+                <>
+                  <MarkdownToolbar textareaId="body" value={body} onChange={setBody} />
+                  <textarea 
+                    id="body" 
+                    rows={10} 
+                    placeholder="Describe the issue in detail. Markdown is supported."
+                    value={body} 
+                    onChange={(e) => setBody(e.target.value)}
+                    className="w-full bg-surface-2 border border-border rounded-b-md text-text text-xs leading-relaxed font-mono px-3 py-2 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20 focus:bg-[#1c2433] resize-y min-h-[300px]" 
+                  />
+                </>
               ) : (
-                <div className="bg-surface-2 border border-border rounded-md px-3 py-3 min-h-[300px]">
-                  {body
-                    ? <pre className="text-text text-xs leading-relaxed whitespace-pre-wrap font-sans">{body}</pre>
-                    : <p className="text-muted text-xs italic">Nothing to preview yet.</p>}
+                <div className="bg-surface-2 border border-border rounded-md px-4 py-3 min-h-[300px] overflow-auto">
+                  {body ? (
+                    <div className="prose-md">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {body}
+                      </ReactMarkdown>
+                    </div>
+                  ) : (
+                    <p className="text-muted text-xs italic">Nothing to preview yet.</p>
+                  )}
                 </div>
               )}
               <p className="text-muted text-[11px]">Markdown supported — headers, lists, code blocks, and more.</p>
