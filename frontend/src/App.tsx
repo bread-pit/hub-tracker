@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Header } from './components/Header'
 import { Input } from './components/ui/Input'
 import { Select } from './components/ui/Select'
@@ -7,16 +7,15 @@ import { Banner } from './components/ui/Banner'
 import { LabelSelector } from './components/github/LabelSelector'
 import type { LabelType } from './components/github/LabelSelector'
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+
 type Status = 'idle' | 'loading' | 'success' | 'error'
-type RepoFetchStatus = 'idle' | 'loading' | 'done' | 'error'
 
 interface Repo { id: number; full_name: string; name: string; description: string; stars: number; language: string }
 
 function App() {
-  const [username, setUsername]           = useState('')
   const [repoList, setRepoList]           = useState<Repo[]>([])
-  const [repoFetchStatus, setRepoFetchStatus] = useState<RepoFetchStatus>('idle')
-  const [repoFetchError, setRepoFetchError]   = useState('')
+  const [loadingRepos, setLoadingRepos]   = useState(true)
   const [repo, setRepo]                   = useState('')
   const [title, setTitle]                 = useState('')
   const [body, setBody]                   = useState('')
@@ -26,29 +25,21 @@ function App() {
   const [issueUrl, setIssueUrl]           = useState('')
   const [activeTab, setActiveTab]         = useState<'write' | 'preview'>('write')
 
-  const fetchRepos = async () => {
-    const trimmed = username.trim()
-    if (!trimmed) return
-    setRepoFetchStatus('loading')
-    setRepoFetchError('')
-    setRepoList([])
-    setRepo('')
-    try {
-      const res = await fetch(`http://localhost:5000/api/repos/${encodeURIComponent(trimmed)}`)
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.detail || 'Failed to fetch repositories.')
-      setRepoList(data)
-      if (data.length > 0) setRepo(data[0].full_name)
-      setRepoFetchStatus('done')
-    } catch (err) {
-      setRepoFetchStatus('error')
-      setRepoFetchError(err instanceof Error ? err.message : 'Something went wrong.')
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/repos`)
+        const data = await res.json()
+        if (res.ok) {
+          setRepoList(data)
+          if (data.length > 0) setRepo(data[0].full_name)
+        }
+      } finally {
+        setLoadingRepos(false)
+      }
     }
-  }
-
-  const handleUsernameKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') { e.preventDefault(); fetchRepos() }
-  }
+    load()
+  }, [])
 
   const toggleLabel = (label: LabelType) =>
     setSelectedLabels((prev) =>
@@ -64,7 +55,7 @@ function App() {
     setIssueUrl('')
 
     try {
-      const res = await fetch('http://localhost:5000/api/issues', {
+      const res = await fetch(`${API_BASE_URL}/api/issues`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -129,73 +120,26 @@ function App() {
 
           <form className="px-7 py-6 flex flex-col gap-5" onSubmit={handleSubmit}>
 
-            {/* Step 1: GitHub username + search */}
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="username" className="text-head text-xs font-semibold flex items-center gap-2">
-                GitHub User / Org
-                <span className="text-muted font-normal font-mono text-[10px]">press Enter or click Search</span>
-              </label>
-              <div className="flex gap-2">
-                <div className="relative flex-1 flex items-center">
-                  <div className="absolute left-2.5 text-muted pointer-events-none">
-                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                      <circle cx="12" cy="8" r="4"/><path strokeLinecap="round" d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
-                    </svg>
-                  </div>
-                  <input
-                    id="username"
-                    type="text"
-                    placeholder="e.g. torvalds or vercel"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    onKeyDown={handleUsernameKey}
-                    className="w-full bg-surface-2 border border-border rounded-md text-text text-sm placeholder:text-muted pl-8 pr-3 py-2 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20 focus:bg-[#1c2433]"
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={fetchRepos}
-                  disabled={!username.trim() || repoFetchStatus === 'loading'}
-                  className="px-4 py-2 rounded-md bg-accent text-white text-xs font-semibold hover:bg-accent/80 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1.5 cursor-pointer"
-                >
-                  {repoFetchStatus === 'loading' ? (
-                    <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
-                    </svg>
-                  ) : (
-                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <circle cx="11" cy="11" r="8"/><path strokeLinecap="round" d="M21 21l-4.35-4.35"/>
-                    </svg>
-                  )}
-                  Search
-                </button>
-              </div>
-              {repoFetchStatus === 'error' && (
-                <p className="text-red-400 text-[11px] mt-0.5">{repoFetchError}</p>
-              )}
-            </div>
-
-            {/* Step 2: Repo dropdown — only shown after a successful search */}
-            {repoFetchStatus === 'done' && (
-              <Select
-                id="repo"
-                label="Repository"
-                hint={`${repoList.length} repo${repoList.length !== 1 ? 's' : ''} found`}
-                value={repo}
-                onChange={(e) => setRepo(e.target.value)}
-                disabled={repoList.length === 0}
-                options={
-                  repoList.length > 0
+            <Select
+              id="repo"
+              label="Repository"
+              hint={loadingRepos ? 'Loading…' : `${repoList.length} repo${repoList.length !== 1 ? 's' : ''} available`}
+              value={repo}
+              onChange={(e) => setRepo(e.target.value)}
+              disabled={loadingRepos || repoList.length === 0}
+              options={
+                loadingRepos
+                  ? [{ value: '', label: 'Loading repositories…' }]
+                  : repoList.length > 0
                     ? repoList.map(r => ({ value: r.full_name, label: r.name }))
-                    : [{ value: '', label: 'No public repositories found' }]
-                }
-                icon={
-                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 7h18M3 12h18M3 17h18"/>
-                  </svg>
-                }
-              />
-            )}
+                    : [{ value: '', label: 'No repositories found' }]
+              }
+              icon={
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 7h18M3 12h18M3 17h18"/>
+                </svg>
+              }
+            />
 
             <Input 
               id="title" 

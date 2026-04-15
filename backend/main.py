@@ -21,6 +21,7 @@ app.add_middleware(
 )
 
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+GITHUB_TARGET = os.getenv("GITHUB_TARGET", "")  # GitHub user or org whose repos to list
 GITHUB_API_URL = "https://api.github.com"
 
 class IssueRequest(BaseModel):
@@ -33,13 +34,20 @@ class IssueRequest(BaseModel):
 def health_check():
     return {"status": "ok", "backend": "python/fastapi"}
 
-@app.get("/api/repos/{username}")
-async def get_repos(username: str):
+@app.get("/api/repos")
+async def get_repos():
     if not GITHUB_TOKEN:
         raise HTTPException(
             status_code=500,
             detail="GITHUB_TOKEN is not configured on the server."
         )
+    if not GITHUB_TARGET:
+        raise HTTPException(
+            status_code=500,
+            detail="GITHUB_TARGET is not configured on the server."
+        )
+
+    username = GITHUB_TARGET
 
     headers = {
         "Authorization": f"Bearer {GITHUB_TOKEN}",
