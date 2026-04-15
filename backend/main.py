@@ -5,6 +5,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import httpx
 from dotenv import load_dotenv
+import uuid
+from fastapi.staticfiles import StaticFiles
+from fastapi import FastAPI, HTTPException, Request, UploadFile, File
 
 # Load environment variables from .env file
 load_dotenv()
@@ -20,6 +23,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Ensure uploads directory exists
+UPLOAD_DIR = "uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+# Mount static files to serve uploads
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 GITHUB_TARGET = os.getenv("GITHUB_TARGET", "")  # GitHub user or org whose repos to list
 GITHUB_API_URL = "https://api.github.com"
@@ -29,6 +39,10 @@ class IssueRequest(BaseModel):
     title: str
     body: Optional[str] = ""
     labels: Optional[List[str]] = []
+
+class UploadResponse(BaseModel):
+    url: str
+    message: str
 
 @app.get("/health")
 def health_check():
@@ -107,7 +121,6 @@ async def get_repos():
                 raise HTTPException(status_code=response.status_code, detail=detail)
         except httpx.RequestError as exc:
             raise HTTPException(status_code=500, detail=f"Network error while fetching repositories: {str(exc)}")
-
 @app.post("/api/issues")
 async def create_issue(issue: IssueRequest):
     if not GITHUB_TOKEN:
@@ -151,6 +164,35 @@ async def create_issue(issue: IssueRequest):
                 
         except httpx.RequestError as exc:
             raise HTTPException(status_code=500, detail=f"An error occurred while requesting {exc.request.url!r}.")
+
+@app.post("/api/upload", response_model=UploadResponse)
+async def upload_image(request: Request, file: UploadFile = File(...)):
+    try:
+        # Generate a unique filename to avoid collisions
+        file_ext = os.path.splitext(file.filename)[1]
+        unique_filename = f"{uuid.uuid4()}{file_ext}"
+        file_path = os.path.join(UPLOAD_DIR, unique_filename)
+        
+        # Save the file locally
+        with open(file_path, "wb") as buffer:
+            content = await file.read()
+            buffer.write(content)
+            
+        # Construct the URL. Use request.base_url as fallback
+        # If the app is behind a proxy, base_url should follow the proxy headers
+        base_url = str(request.base_url).rstrip("/")
+        file_url = f"{base_url}/uploads/{unique_filename}"
+        
+        # Log for debugging
+        print(f"File saved to {file_path}")
+        print(f"Accessible at {file_url}")
+        
+        return UploadResponse(url=file_url, message="Image uploaded successfully")
+                
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn
