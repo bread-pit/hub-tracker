@@ -63,6 +63,17 @@ Before running the servers, set up your GitHub Personal Access Token (PAT).
    ```
    _Follow the link provided in the terminal (usually http://localhost:5173)_
 
+### 4. Setup Image Hosting (ImgBB)
+
+To ensure images preview correctly on GitHub, HubTracker uses **ImgBB** for cloud hosting.
+
+1.  Get a free API Key at [api.imgbb.com](https://api.imgbb.com/).
+2.  Add it to your `backend/.env`:
+    ```env
+    IMGBB_API_KEY=your_key_here
+    ```
+3.  Restart the backend server.
+
 ---
 
 ## 🛠 Features
