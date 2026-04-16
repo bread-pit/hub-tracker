@@ -5,8 +5,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import httpx
 from dotenv import load_dotenv
-import uuid
-from fastapi.staticfiles import StaticFiles
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File
 
 # Load environment variables from .env file
@@ -22,13 +20,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Ensure uploads directory exists
-UPLOAD_DIR = "uploads"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-
-# Mount static files to serve uploads
-app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 GITHUB_TARGET = os.getenv("GITHUB_TARGET", "")  # GitHub user or org whose repos to list
@@ -167,28 +158,39 @@ async def create_issue(issue: IssueRequest):
 
 @app.post("/api/upload", response_model=UploadResponse)
 async def upload_image(request: Request, file: UploadFile = File(...)):
+    IMGBB_API_KEY = os.getenv("IMGBB_API_KEY")
+    if not IMGBB_API_KEY:
+        raise HTTPException(
+            status_code=500,
+            detail="IMGBB_API_KEY is not configured on the server."
+        )
+
     try:
-        # Generate a unique filename to avoid collisions
-        file_ext = os.path.splitext(file.filename)[1]
-        unique_filename = f"{uuid.uuid4()}{file_ext}"
-        file_path = os.path.join(UPLOAD_DIR, unique_filename)
-        
-        # Save the file locally
-        with open(file_path, "wb") as buffer:
-            content = await file.read()
-            buffer.write(content)
+        content = await file.read()
+
+        async with httpx.AsyncClient() as client:
+            # ImgBB API supports multipart/form-data
+            # We pass the API key as a query parameter
+            params = {"key": IMGBB_API_KEY}
+            files = {"image": (file.filename, content)}
             
-        # Construct the URL. Use request.base_url as fallback
-        # If the app is behind a proxy, base_url should follow the proxy headers
-        base_url = str(request.base_url).rstrip("/")
-        file_url = f"{base_url}/uploads/{unique_filename}"
-        
-        # Log for debugging
-        print(f"File saved to {file_path}")
-        print(f"Accessible at {file_url}")
-        
-        return UploadResponse(url=file_url, message="Image uploaded successfully")
+            response = await client.post("https://api.imgbb.com/1/upload", params=params, files=files)
+            
+            if response.status_code == 200:
+                data = response.json()
+                # Get the direct image URL
+                img_url = data["data"]["url"]
+                return UploadResponse(url=img_url, message="Image uploaded successfully to ImgBB")
+            else:
+                try:
+                    error_data = response.json()
+                    detail = error_data.get("error", {}).get("message", "Error uploading to ImgBB")
+                except:
+                    detail = f"ImgBB API returned status {response.status_code}"
+                raise HTTPException(status_code=response.status_code, detail=detail)
                 
+    except HTTPException:
+        raise
     except Exception as e:
         import traceback
         traceback.print_exc()
