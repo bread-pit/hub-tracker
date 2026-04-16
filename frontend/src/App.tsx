@@ -143,7 +143,7 @@ function App() {
 
       <Header />
 
-      <main className="flex-1 flex flex-col items-center justify-start px-4 pt-4 pb-8">
+      <main className="flex-1 flex flex-col items-center justify-center px-4 py-12">
         <div className="w-full max-w-4xl bg-surface border border-border rounded-2xl shadow-2xl overflow-hidden animate-[slideUp_0.4s_cubic-bezier(0.16,1,0.3,1)]">
 
           <div className="px-7 pt-7 pb-5 border-b border-border bg-linear-to-b from-surface-2 to-surface">
